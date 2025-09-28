@@ -1,0 +1,16 @@
+# System files
+.DS_Store
+*.swp
+*.swo
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Debug logs
+debug.log
+
+# IDE specific
+.idea/
+.vscode/
