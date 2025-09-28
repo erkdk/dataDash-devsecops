@@ -60,7 +60,7 @@ const ItemForm = ({ itemToEdit, onItemSaved }) => {
 
   return (
     <div className="card">
-      <h2 className="mb-2">{itemToEdit ? "Edit Item" : "Add New Item"}</h2>
+      <h2 className="mb-2">{itemToEdit ? "Edit Item" : "Add a new item"}</h2>
 
       {error && <div className="error-message mb-2">{error}</div>}
 
