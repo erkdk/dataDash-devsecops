@@ -1,0 +1,16 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for hosts_resolver
+# Ensure all internal hostnames are resolvable
+
+- name: Add host entries to /etc/hosts
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "{{ item.ip }} {{ item.hostname }}"
+    state: present
+    create: yes
+  # The 'loop' keyword must be at the same indentation level as the module name and 'name'
+  # The value for 'loop' must be quoted when starting with a template expression ({{)
+  loop: "{{ hosts_entries }}"
+  become: yes
+  tags: hosts

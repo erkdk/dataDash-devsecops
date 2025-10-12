@@ -1,0 +1,12 @@
+#SPDX-License-Identifier: MIT-0
+---
+# vars file for hosts_resolver
+# Define IP-to-hostname mappings for internal resolution
+
+hosts_entries:
+  - { ip: "192.168.56.11", hostname: "build.local" }
+  - { ip: "192.168.56.12", hostname: "jenkins.local" }
+  - { ip: "192.168.56.13", hostname: "registry.local" }
+  - { ip: "192.168.56.14", hostname: "k8smon.local" }
+
+
