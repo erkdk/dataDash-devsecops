@@ -1,0 +1,55 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for trivy_scanner
+# tasks file for trivy_scanner
+
+- name: 1. Ensure required system dependencies are installed
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+    state: present
+    update_cache: yes
+  become: true
+  
+- name: 2. Download Trivy binary securely (verified via GitHub release)
+  ansible.builtin.get_url:
+    url: "https://github.com/aquasecurity/trivy/releases/download/v{{ trivy_version }}/trivy_{{ trivy_version }}_Linux-64bit.tar.gz"
+    dest: "/tmp/trivy.tar.gz"
+    mode: "0644"
+  become: true
+
+- name: 3. Extract Trivy binary to {{ trivy_install_dir }}
+  ansible.builtin.unarchive:
+   src: "/tmp/trivy.tar.gz"
+   dest: "{{ trivy_install_dir }}"
+   remote_src: true
+  become: true
+
+- name: 4. Ensure Trivy binary is executable
+  ansible.builtin.file:
+    path: "{{ trivy_install_dir }}/trivy"
+    mode: '0755'
+    state: file
+  become: true
+
+- name: 5. Create cache directory for Trivy (for DB and reports)
+  ansible.builtin.file:
+    path: "{{ trivy_cache_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: true
+
+- name: 6. Verify Trivy installation
+  ansible.builtin.command: "{{ trivy_install_dir }}/trivy --version"
+  register: trivy_version_check
+  changed_when: false
+  become: true
+
+- name: 7. Display installed version
+  ansible.builtin.debug:
+    msg: "Trivy successfully installed: {{ trivy_version_check.stdout }}"
