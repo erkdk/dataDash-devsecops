@@ -1,0 +1,15 @@
+#SPDX-License-Identifier: MIT-0
+---
+# vars file for jenkins_server
+
+jenkins_repo_key_url: https://pkg.jenkins.io/debian/jenkins.io-2023.key
+jenkins_repo_url: deb https://pkg.jenkins.io/debian binary/
+jenkins_plugins:
+  - git
+  - workflow-aggregator
+  - docker-plugin
+  - configuration-as-code
+  - credentials-binding
+  - pipeline-stage-view
+  - blueocean
+

@@ -1,0 +1,13 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for jenkins_server
+jenkins_user: jenkins
+jenkins_group: jenkins
+jenkins_home: /var/lib/jenkins
+jenkins_url: "http://jenkins.local:8080/"
+jenkins_http_port: 8080
+jenkins_admin_email: admin@jenkins.local
+create_admin_user: true
+install_docker_for_jenkins: false
+jenkins_admin_username: "admin"
+jenkins_admin_password: "aadarsha"
