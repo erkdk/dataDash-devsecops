@@ -5,7 +5,7 @@ pipeline {
 
     environment {
         HARBOR_REGISTRY = 'registry.local'
-        HARBOR_PROJECT = 'dataDash'
+        HARBOR_PROJECT = 'datadash'
         BACKEND_IMAGE = "${HARBOR_REGISTRY}/${HARBOR_PROJECT}/backend"
         FRONTEND_IMAGE = "${HARBOR_REGISTRY}/${HARBOR_PROJECT}/frontend"
     }
