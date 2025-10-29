@@ -35,12 +35,6 @@ pipeline {
                 echo 'Stage 2: Building Docker images...'
                 
                 script {
-                    // Clean up any existing images first (optional)
-                    sh """
-                    docker rmi ${BACKEND_IMAGE}:latest 2>/dev/null || true
-                    docker rmi ${FRONTEND_IMAGE}:latest 2>/dev/null || true
-                    """
-                    
                     // Build Backend Image
                     sh """
                     docker build -t ${BACKEND_IMAGE}:${BUILD_NUMBER} \
@@ -56,7 +50,6 @@ pipeline {
                     """
                     
                     sh 'echo "Docker images built successfully"'
-                    sh 'docker images | grep ${HARBOR_REGISTRY}'
                 }
             }
         }
@@ -86,13 +79,46 @@ pipeline {
                 }
             }
         }
+
+        stage('Push to Harbor Registry') {
+            steps {
+                echo 'Stage 4: Pushing images to Harbor registry...'
+                
+                script {
+                    // Login to Harbor
+                    withCredentials([usernamePassword(
+                        credentialsId: 'harbor-credentials',
+                        usernameVariable: 'HARBOR_USERNAME',
+                        passwordVariable: 'HARBOR_PASSWORD'
+                    )]) {
+                        sh """
+                        echo \$HARBOR_PASSWORD | docker login ${HARBOR_REGISTRY} -u \$HARBOR_USERNAME --password-stdin
+                        """
+                    }
+                    
+                    // Push Backend Image
+                    sh """
+                    docker push ${BACKEND_IMAGE}:${BUILD_NUMBER}
+                    docker push ${BACKEND_IMAGE}:latest
+                    """
+                    
+                    // Push Frontend Image
+                    sh """
+                    docker push ${FRONTEND_IMAGE}:${BUILD_NUMBER}
+                    docker push ${FRONTEND_IMAGE}:latest
+                    """
+                    
+                    sh 'echo "Images successfully pushed to Harbor"'
+                }
+            }
+        }
     }
     
     post {
         always {
             echo 'Pipeline execution completed'
             
-            // CRITICAL: Clean up ALL local Docker images to save space
+            // Clean up local Docker images to save space
             script {
                 sh """
                 # Remove the specific images we built
@@ -101,8 +127,8 @@ pipeline {
                 docker rmi ${FRONTEND_IMAGE}:${BUILD_NUMBER} 2>/dev/null || true
                 docker rmi ${FRONTEND_IMAGE}:latest 2>/dev/null || true
                 
-                # Clean up dangling images
-                docker image prune -f 2>/dev/null || true
+                # Logout from Harbor (optional)
+                docker logout ${HARBOR_REGISTRY} 2>/dev/null || true
                 """
                 
                 sh 'echo "Cleaned up local Docker images"'
