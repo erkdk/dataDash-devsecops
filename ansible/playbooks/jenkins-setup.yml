@@ -1,0 +1,5 @@
+- name: Configure Jenkins Server on VM2
+  hosts: jenkins_server
+  become: true
+  roles:
+    - jenkins_server

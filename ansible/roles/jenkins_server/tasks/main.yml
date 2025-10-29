@@ -1,0 +1,111 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for jenkins_server
+
+- name: 1. Ensure Java (JDK 17) is installed
+  ansible.builtin.apt:
+    name: openjdk-17-jdk
+    state: present
+    update_cache: yes
+  become: true
+
+- name: 2. Add Jenkins GPG Key
+  ansible.builtin.apt_key:
+    url: "{{ jenkins_repo_key_url }}"
+    state: present
+  become: true
+
+- name: 3. Add Jenkins repository
+  ansible.builtin.apt_repository:
+    repo: "{{ jenkins_repo_url }}"
+    state: present
+  become: true
+
+- name: 4. Install Jenkins
+  ansible.builtin.apt:
+    name: jenkins
+    state: present
+    update_cache: yes
+  become: true
+
+- name: 5. Ensure Jenkins service is enabled and started
+  ansible.builtin.service:
+    name: jenkins
+    state: started
+    enabled: true
+  become: true
+
+- name: 6. Create init.groovy.d directory
+  ansible.builtin.file:
+    path: "{{ jenkins_home }}/init.groovy.d"
+    state: directory
+    owner: "{{ jenkins_user }}"
+    group: "{{ jenkins_group }}"
+    mode: '0755'
+  become: true
+
+- name: 7. Configure Jenkins security (create admin user)
+  ansible.builtin.template:
+    src: basic-security.groovy.j2
+    dest: "{{ jenkins_home }}/init.groovy.d/basic-security.groovy"
+    owner: "{{ jenkins_user }}"
+    group: "{{ jenkins_group }}"
+    mode: '0644'
+  when: create_admin_user | default(true)
+  become: true
+  notify: Restart Jenkins
+
+- name: 7.1 Trigger Jenkins restart to apply security configuration
+  ansible.builtin.service:
+    name: jenkins
+    state: restarted
+  become: true
+  when: create_admin_user | default(true)
+
+- name: 7.2 Wait for Jenkins to be fully ready after security setup
+  ansible.builtin.wait_for:
+    port: "{{ jenkins_http_port }}"
+    state: started
+    delay: 15
+    timeout: 180
+  become: true
+
+- name: 7.3 Verify Jenkins API is responsive with new credentials
+  ansible.builtin.uri:
+    url: "http://localhost:{{ jenkins_http_port }}/whoAmI/api/json"
+    user: "{{ jenkins_admin_username }}"
+    password: "{{ jenkins_admin_password }}"
+    force_basic_auth: true
+    status_code: 200
+    timeout: 30
+  register: jenkins_auth_test
+  retries: 5
+  delay: 10
+  until: jenkins_auth_test.status == 200
+  become: false
+
+- name: 8. Install required jenkins plugins
+  community.general.jenkins_plugin:
+    name: "{{ item }}"
+    state: present
+    url: "http://localhost:{{ jenkins_http_port }}"
+    url_username: "{{ jenkins_admin_username }}"
+    url_password: "{{ jenkins_admin_password }}"
+  loop: "{{ jenkins_plugins }}"
+  register: jenkins_plugins_result
+  until: jenkins_plugins_result is succeeded
+  retries: 3
+  delay: 10
+  become: true
+  notify: Restart Jenkins
+
+- name: 9. Wait for Jenkins to be available
+  ansible.builtin.uri:
+    url: "http://localhost:{{ jenkins_http_port }}/login"
+    status_code: 200
+    timeout: 30
+  register: jenkins_status
+  retries: 10
+  delay: 15
+  until: jenkins_status.status == 200
+  become: true

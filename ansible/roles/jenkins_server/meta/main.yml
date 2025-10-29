@@ -1,0 +1,7 @@
+#SPDX-License-Identifier: MIT-0
+galaxy_info:
+  author: erkdk
+  description: Jenkins server installation and secure setup
+  license: MIT
+  min_ansible_version: 2.1
+dependencies: []
