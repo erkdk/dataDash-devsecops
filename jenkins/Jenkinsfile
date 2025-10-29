@@ -26,8 +26,6 @@ pipeline {
                 
                 script {
                     sh 'echo "checkout successful!"'
-                    sh 'echo "Current directory:"'
-                    sh 'pwd'
                 }
             }
         }
@@ -37,6 +35,12 @@ pipeline {
                 echo 'Stage 2: Building Docker images...'
                 
                 script {
+                    // Clean up any existing images first (optional)
+                    sh """
+                    docker rmi ${BACKEND_IMAGE}:latest 2>/dev/null || true
+                    docker rmi ${FRONTEND_IMAGE}:latest 2>/dev/null || true
+                    """
+                    
                     // Build Backend Image
                     sh """
                     docker build -t ${BACKEND_IMAGE}:${BUILD_NUMBER} \
@@ -51,9 +55,34 @@ pipeline {
                                  ./client
                     """
                     
-                    // Verify images were built
-                    sh 'echo "Docker images built successfully:"'
+                    sh 'echo "Docker images built successfully"'
                     sh 'docker images | grep ${HARBOR_REGISTRY}'
+                }
+            }
+        }
+
+        stage('Security Scan with Trivy') {
+            steps {
+                echo 'Stage 3: Scanning container images for vulnerabilities...'
+                
+                script {
+                    // Scan Backend Image
+                    sh """
+                    trivy image --exit-code 0 \
+                                --severity HIGH,CRITICAL \
+                                --format table \
+                                ${BACKEND_IMAGE}:${BUILD_NUMBER}
+                    """
+                    
+                    // Scan Frontend Image
+                    sh """
+                    trivy image --exit-code 0 \
+                                --severity HIGH,CRITICAL \
+                                --format table \
+                                ${FRONTEND_IMAGE}:${BUILD_NUMBER}
+                    """
+                    
+                    sh 'echo "Security scanning completed"'
                 }
             }
         }
@@ -62,6 +91,22 @@ pipeline {
     post {
         always {
             echo 'Pipeline execution completed'
+            
+            // CRITICAL: Clean up ALL local Docker images to save space
+            script {
+                sh """
+                # Remove the specific images we built
+                docker rmi ${BACKEND_IMAGE}:${BUILD_NUMBER} 2>/dev/null || true
+                docker rmi ${BACKEND_IMAGE}:latest 2>/dev/null || true
+                docker rmi ${FRONTEND_IMAGE}:${BUILD_NUMBER} 2>/dev/null || true
+                docker rmi ${FRONTEND_IMAGE}:latest 2>/dev/null || true
+                
+                # Clean up dangling images
+                docker image prune -f 2>/dev/null || true
+                """
+                
+                sh 'echo "Cleaned up local Docker images"'
+            }
         }
     }
 }
