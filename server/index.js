@@ -4,6 +4,7 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import connectDB from "./config/db.js";
 import mongoose from "mongoose";
+import healthRouter from './health.js';
 
 const app = express();
 
@@ -15,6 +16,8 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // Routes
+app.use('/health', healthRouter);
+
 import itemsRouter from "./routes/items.js";
 app.use("/api/items", itemsRouter);
 
