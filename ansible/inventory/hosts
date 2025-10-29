@@ -1,0 +1,22 @@
+
+[build_server]
+vm1 ansible_host=192.168.56.11
+
+[jenkins_server]
+vm2 ansible_host=192.168.56.12
+
+[registry_server]
+vm3 ansible_host=192.168.56.13
+
+[k8smon_server]
+vm4 ansible_host=192.168.56.14
+
+[devsecops:children]
+build_server
+jenkins_server
+registry_server
+k8smon_server
+
+[all:vars]
+ansible_user=vagrant
+ansible_ssh_private_key_file=/home/vagrant/.ssh/id_ed25519
