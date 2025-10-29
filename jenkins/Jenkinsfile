@@ -1,0 +1,43 @@
+pipeline {
+    agent {
+        label 'build'
+    }
+
+    environment {
+        HARBOR_REGISTRY = 'registry.local'
+        HARBOR_PROJECT = 'dataDash-'
+        BACKEND_IMAGE = "${HARBOR_REGISTRY}/${HARBOR_PROJECT}/backend"  
+        FRONTEND_IMAGE = "${HARBOR_REGISTRY}/${HARBOR_PROJECT}/frontend" 
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                echo 'Stage 1: Checking out source code...'
+                
+                // Without credentials (for public repos or testing)
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: 'develop']],
+                    extensions: [],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/erkdk/dataDash-devsecops.git'
+                        // No credentialsId for public repos
+                    ]]
+                ])
+                
+                script {
+                    sh 'echo "checkout successful!"'
+                    sh 'echo "Current directory:"'
+                    sh 'pwd'
+                    sh 'echo "Contents:"'
+                    sh 'ls -la'
+                    sh 'echo "Client directory:"'
+                    sh 'ls -la client/'
+                    sh 'echo "Server directory:"'
+                    sh 'ls -la server/'
+                }
+            }
+        }
+    }
+}
