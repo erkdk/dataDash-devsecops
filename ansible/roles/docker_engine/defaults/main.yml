@@ -1,0 +1,40 @@
+# SPDX-License-Identifier: MIT-0
+---
+# defaults file for docker_engine
+
+# === Docker Engine default configuration ===
+
+# Whether to allow remote access to the Docker daemon (e.g. via TCP socket)
+docker_allow_remote_access: false
+
+# Path to Docker daemon configuration
+docker_daemon_config_path: /etc/docker/daemon.json
+
+# Users allowed to run Docker commands (added to docker group)
+docker_users:
+  - vagrant
+
+# Docker packages to install (latest stable versions from Docker APT repo)
+docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+  - docker-compose-plugin
+
+# === Docker APT repository configuration ===
+
+# Docker GPG key and repository (Ubuntu 24.04 "noble" compatible)
+docker_apt_key_url: "https://download.docker.com/linux/ubuntu/gpg"
+docker_apt_key_path: "/etc/apt/keyrings/docker.asc"
+
+# Optional checksum verification (update as needed)
+# Get latest checksum with:
+#   curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sha256sum
+docker_gpg_checksum: ""
+
+# Official Docker repo for Ubuntu 24.04+ using signed-by syntax
+docker_apt_repo: >
+  deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc]
+  https://download.docker.com/linux/ubuntu {{ ansible_distribution_release | lower }} stable
+

@@ -1,0 +1,12 @@
+{
+  "log-driver": "json-file",
+  "log-opts": { "max-size": "100m" },
+  "storage-driver": "overlay2",
+  "icc": false,
+  "no-new-privileges": true,
+  "features": { "buildkit": true }
+  {% if docker_allow_remote_access %}
+  ,"hosts": ["tcp://0.0.0.0:2375"]
+  {% endif %}
+}
+

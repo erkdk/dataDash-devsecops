@@ -1,0 +1,10 @@
+---
+# SPDX-License-Identifier: MIT-0
+# This playbook prepares the build server with Docker and Trivy
+- name: Setup build server with Docker and Trivy
+  hosts: build_server
+  become: true
+  roles:
+    - docker_engine
+    - trivy_scanner
+
