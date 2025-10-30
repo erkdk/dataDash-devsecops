@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: datadash-backend
+  namespace: datadash
+  labels:
+    app: datadash-backend
+spec:
+  selector:
+    app: datadash-backend
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
+  type: ClusterIP
