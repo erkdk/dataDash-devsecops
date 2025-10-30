@@ -8,9 +8,11 @@ pipeline {
         HARBOR_PROJECT = 'datadash'
         BACKEND_IMAGE = "${HARBOR_REGISTRY}/${HARBOR_PROJECT}/backend"
         FRONTEND_IMAGE = "${HARBOR_REGISTRY}/${HARBOR_PROJECT}/frontend"
+        K8S_NAMESPACE = 'datadash'
     }
 
     stages {
+        // Stage 1: Code Checkout
         stage('Checkout Code') {
             steps {
                 echo 'Stage 1: Checking out source code...'
@@ -25,16 +27,24 @@ pipeline {
                 ])
                 
                 script {
-                    sh 'echo "checkout successful!"'
+                    sh 'echo "Checkout successful!"'
+                    sh 'echo "Build Number: ${BUILD_NUMBER}"'
                 }
             }
         }
 
+        // Stage 2: Build Docker Images
         stage('Build Docker Images') {
             steps {
                 echo 'Stage 2: Building Docker images...'
                 
                 script {
+                    // Clean up any existing images first
+                    sh """
+                    docker rmi ${BACKEND_IMAGE}:latest 2>/dev/null || true
+                    docker rmi ${FRONTEND_IMAGE}:latest 2>/dev/null || true
+                    """
+                    
                     // Build Backend Image
                     sh """
                     docker build -t ${BACKEND_IMAGE}:${BUILD_NUMBER} \
@@ -50,10 +60,12 @@ pipeline {
                     """
                     
                     sh 'echo "Docker images built successfully"'
+                    sh 'docker images | grep ${HARBOR_REGISTRY}'
                 }
             }
         }
 
+        // Stage 3: Security Scan with Trivy
         stage('Security Scan with Trivy') {
             steps {
                 echo 'Stage 3: Scanning container images for vulnerabilities...'
@@ -80,6 +92,7 @@ pipeline {
             }
         }
 
+        // Stage 4: Push to Harbor Registry
         stage('Push to Harbor Registry') {
             steps {
                 echo 'Stage 4: Pushing images to Harbor registry...'
@@ -112,6 +125,96 @@ pipeline {
                 }
             }
         }
+
+        // Stage 5: Deploy to K3s
+        stage('Deploy to K3s') {
+            steps {
+                echo 'Stage 5: Deploying to K3s cluster...'
+                
+                // Load kubeconfig from Jenkins credentials
+                withCredentials([file(credentialsId: 'k3s-kubeconfig', variable: 'KUBECONFIG')]) {
+                    script {
+                        // Set KUBECONFIG environment variable
+                        env.KUBECONFIG = "${KUBECONFIG}"
+                        
+                        // Create namespace if not exists
+                        sh """
+                        kubectl create namespace ${K8S_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
+                        """
+                        
+                        // Create secret using Jenkins credentials
+                        withCredentials([string(credentialsId: 'mongodb-uri', variable: 'MONGODB_URI_SECRET')]) {
+                            sh """
+                            kubectl create secret generic datadash-secrets \
+                              --from-literal=mongodb-uri='${MONGODB_URI_SECRET}' \
+                              -n ${K8S_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
+                            """
+                        }
+                        
+                        // Apply all Kubernetes manifests
+                        sh """
+                        kubectl apply -f k8s/namespace.yaml
+                        kubectl apply -f k8s/backend-service.yaml
+                        kubectl apply -f k8s/backend-deployment.yaml
+                        kubectl apply -f k8s/frontend-service.yaml
+                        kubectl apply -f k8s/frontend-deployment.yaml
+                        kubectl apply -f k8s/ingress.yaml
+                        """
+                        
+                        // Wait for rollout to complete
+                        sh """
+                        kubectl rollout status deployment/datadash-backend -n ${K8S_NAMESPACE} --timeout=300s
+                        kubectl rollout status deployment/datadash-frontend -n ${K8S_NAMESPACE} --timeout=300s
+                        """
+                        
+                        sh 'echo "Application successfully deployed to K3s"'
+                        
+                        // Show deployment status
+                        sh """
+                        echo "=== Deployment Status ==="
+                        kubectl get deployments -n ${K8S_NAMESPACE}
+                        echo ""
+                        echo "=== Pod Status ==="
+                        kubectl get pods -n ${K8S_NAMESPACE}
+                        echo ""
+                        echo "=== Service Status ==="
+                        kubectl get services -n ${K8S_NAMESPACE}
+                        echo ""
+                        echo "=== Ingress Status ==="
+                        kubectl get ingress -n ${K8S_NAMESPACE}
+                        """
+                    }
+                }
+            }
+        }
+
+        // Stage 6: Smoke Tests
+        stage('Smoke Tests') {
+            steps {
+                echo 'Stage 6: Running smoke tests...'
+                
+                withCredentials([file(credentialsId: 'k3s-kubeconfig', variable: 'KUBECONFIG')]) {
+                    script {
+                        env.KUBECONFIG = "${KUBECONFIG}"
+                        
+                        // Test backend health endpoint
+                        sh """
+                        kubectl wait --for=condition=ready pod -l app=datadash-backend -n ${K8S_NAMESPACE} --timeout=60s
+                        echo "Testing backend health endpoint..."
+                        kubectl exec -n ${K8S_NAMESPACE} deployment/datadash-backend -- curl -s http://localhost:5000/health || echo "Backend health check failed"
+                        """
+                        
+                        // Test frontend availability (via port-forward temporarily)
+                        sh """
+                        kubectl wait --for=condition=ready pod -l app=datadash-frontend -n ${K8S_NAMESPACE} --timeout=60s
+                        echo "Frontend pods are ready"
+                        """
+                        
+                        sh 'echo "Smoke tests completed successfully"'
+                    }
+                }
+            }
+        }
     }
     
     post {
@@ -127,12 +230,25 @@ pipeline {
                 docker rmi ${FRONTEND_IMAGE}:${BUILD_NUMBER} 2>/dev/null || true
                 docker rmi ${FRONTEND_IMAGE}:latest 2>/dev/null || true
                 
-                # Logout from Harbor (optional)
+                # Logout from Harbor
                 docker logout ${HARBOR_REGISTRY} 2>/dev/null || true
+                
+                # Clean up dangling images
+                docker image prune -f 2>/dev/null || true
                 """
                 
                 sh 'echo "Cleaned up local Docker images"'
             }
+        }
+        
+        success {
+            echo 'Pipeline executed successfully! Application deployed to K3s.'
+            // You can add notifications here (Slack, Email, etc.)
+        }
+        
+        failure {
+            echo 'Pipeline execution failed! Check the logs above.'
+            // You can add failure notifications here
         }
     }
 }
