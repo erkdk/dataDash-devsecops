@@ -160,6 +160,11 @@ pipeline {
                         kubectl apply -f k8s/frontend-deployment.yaml
                         kubectl apply -f k8s/ingress.yaml
                         """
+
+			// Restart backend to pick up latest image & secrets
+			sh """
+			kubectl rollout restart deployment/datadash-backend -n ${K8S_NAMESPACE}
+			"""
                         
                         // Wait for rollout to complete
                         sh """
