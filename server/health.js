@@ -3,24 +3,20 @@ import mongoose from 'mongoose';
 
 const router = express.Router();
 
-router.get('/health', async (req, res) => {
+router.get('/', (req, res) => {
   try {
-    // Check database connection
-    const dbState = mongoose.connection.readyState;
-    const dbStatus = dbState === 1 ? 'connected' : 'disconnected';
+    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
     
     res.status(200).json({
       status: 'OK',
       timestamp: new Date().toISOString(),
-      service: 'dataDash-server',
+      service: 'datadash-backend',
       database: dbStatus,
-      databaseState: dbState
+      uptime: process.uptime()
     });
   } catch (error) {
     res.status(503).json({
       status: 'ERROR',
-      timestamp: new Date().toISOString(),
-      service: 'dataDash-server',
       error: error.message
     });
   }
