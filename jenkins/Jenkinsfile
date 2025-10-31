@@ -125,6 +125,8 @@ pipeline {
                 }
             }
         }
+//----------------------------------
+        // Stage 5: Deploy to K3s
 
         // Stage 5: Deploy to K3s
         stage('Deploy to K3s') {
@@ -145,11 +147,17 @@ pipeline {
                         // Create secret using Jenkins credentials
                         withCredentials([string(credentialsId: 'mongodb-uri', variable: 'MONGODB_URI_SECRET')]) {
                             sh """
-                            kubectl create secret generic datadash-secrets \
-                              --from-literal=mongodb-uri='${MONGODB_URI_SECRET}' \
+                            kubectl create secret generic datadash-secrets \\
+                              --from-literal=mongodb-uri='${MONGODB_URI_SECRET}' \\
                               -n ${K8S_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
                             """
                         }
+                        
+                        // First, check current state
+                        sh """
+                        echo "=== Current State Before Deployment ==="
+                        kubectl get deployments,replicasets,pods -n ${K8S_NAMESPACE} || true
+                        """
                         
                         // Apply all Kubernetes manifests
                         sh """
@@ -161,39 +169,87 @@ pipeline {
                         kubectl apply -f k8s/ingress.yaml
                         """
 
-			// Restart backend to pick up latest image & secrets
-			sh """
-			kubectl rollout restart deployment/datadash-backend -n ${K8S_NAMESPACE}
-			"""
+                        // Wait a moment for resources to be created
+                        sh "sleep 10"
                         
-                        // Wait for rollout to complete
+                        // Check what was deployed
                         sh """
-                        kubectl rollout status deployment/datadash-backend -n ${K8S_NAMESPACE} --timeout=300s
-                        kubectl rollout status deployment/datadash-frontend -n ${K8S_NAMESPACE} --timeout=300s
+                        echo "=== Deployed Resources ==="
+                        kubectl get deployments,replicasets,pods -n ${K8S_NAMESPACE}
+                        echo ""
+                        echo "=== Backend Deployment Details ==="
+                        kubectl describe deployment datadash-backend -n ${K8S_NAMESPACE}
+                        """
+                        
+                        // Check pod events and logs for failing pods
+                        sh """
+                        echo "=== Pod Events ==="
+                        kubectl get events -n ${K8S_NAMESPACE} --sort-by='.lastTimestamp'
+                        echo ""
+                        echo "=== Failing Pods Details ==="
+                        kubectl get pods -n ${K8S_NAMESPACE} --field-selector=status.phase!=Running -o name | while read pod; do
+                            echo "=== Details for \$pod ==="
+                            kubectl describe \$pod -n ${K8S_NAMESPACE}
+                            echo "=== Logs for \$pod ==="
+                            kubectl logs \$pod -n ${K8S_NAMESPACE} --tail=50 || true
+                            echo ""
+                        done
+                        """
+                        
+                        // Now try the rollout restart with better debugging
+                        sh """
+                        echo "=== Restarting Backend Deployment ==="
+                        kubectl rollout restart deployment/datadash-backend -n ${K8S_NAMESPACE}
+                        """
+                        
+                        // Wait for rollout with detailed progress
+                        sh """
+                        echo "=== Waiting for Rollout ==="
+                        timeout 300s bash -c "
+                            while true; do
+                                kubectl rollout status deployment/datadash-backend -n ${K8S_NAMESPACE} && break
+                                echo 'Rollout in progress...'
+                                kubectl get pods -n ${K8S_NAMESPACE} -l app=datadash-backend
+                                kubectl get replicasets -n ${K8S_NAMESPACE} -l app=datadash-backend
+                                sleep 10
+                            done
+                        " || {
+                            echo "=== Rollout Timed Out - Debugging Info ==="
+                            kubectl get pods -n ${K8S_NAMESPACE} -o wide
+                            kubectl describe deployment datadash-backend -n ${K8S_NAMESPACE}
+                            kubectl get events -n ${K8S_NAMESPACE} --sort-by='.lastTimestamp' | tail -20
+                            exit 1
+                        }
+                        """
+                        
+                        // Wait for frontend rollout
+                        sh """
+                        kubectl rollout status deployment/datadash-frontend -n ${K8S_NAMESPACE} --timeout=180s
                         """
                         
                         sh 'echo "Application successfully deployed to K3s"'
                         
-                        // Show deployment status
+                        // Show final deployment status
                         sh """
-                        echo "=== Deployment Status ==="
+                        echo "=== Final Deployment Status ==="
                         kubectl get deployments -n ${K8S_NAMESPACE}
                         echo ""
-                        echo "=== Pod Status ==="
-                        kubectl get pods -n ${K8S_NAMESPACE}
+                        echo "=== Final Pod Status ==="
+                        kubectl get pods -n ${K8S_NAMESPACE} -o wide
                         echo ""
-                        echo "=== Service Status ==="
+                        echo "=== Final Service Status ==="
                         kubectl get services -n ${K8S_NAMESPACE}
-                        echo ""
-                        echo "=== Ingress Status ==="
-                        kubectl get ingress -n ${K8S_NAMESPACE}
                         """
                     }
                 }
             }
         }
 
-        // Stage 6: Smoke Tests
+
+
+//----------------------------------
+
+	// Stage 6: Smoke Tests
         stage('Smoke Tests') {
             steps {
                 echo 'Stage 6: Running smoke tests...'
