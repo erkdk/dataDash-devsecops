@@ -1,7 +1,8 @@
 import axios from "axios";
 
+// Use relative URL - browser will use the same domain
 const API = axios.create({
-  baseURL: process.env.REACT_APP_API_BASE_URL || "http://192.168.56.11:5000/api",
+  baseURL: process.env.REACT_APP_API_BASE_URL || "/api",
 });
 
 // Items CRUD
