@@ -296,27 +296,18 @@ pipeline {
     }
 
     success {
-        echo 'Pipeline executed successfully! Application deployed to K3s.'
-
-        // ===== ADD EMAIL NOTIFICATION =====
         script {
-            def subject = "[SUCCESS] ${env.JOB_NAME} #${env.BUILD_NUMBER}"
-            def body = """<html>
-            <body>
-            <h2 style="color:green;"> Build Successful!</h2>
-            <p><b>Project:</b> ${env.JOB_NAME}<br>
-               <b>Build #:</b> ${env.BUILD_NUMBER}<br>
-               <b>Status:</b> SUCCESS<br>
-               <b>Branch:</b> ${env.GIT_BRANCH ?: 'develop'}<br>
-               <b>Duration:</b> ${currentBuild.durationString}<br>
-               <b>Build URL:</b> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
-            <hr>
-            <p style="font-size:12px;color:#555;">Automated notification from Jenkins (vm2 - jenkins.local)</p>
-            </body></html>"""
+            def bodyTemplate = readFile('jenkins/templates/success_email.html')
+            def body = bodyTemplate
+                        .replace('${JOB_NAME}', env.JOB_NAME)
+                        .replace('${BUILD_NUMBER}', env.BUILD_NUMBER)
+                        .replace('${GIT_BRANCH}', env.GIT_BRANCH ?: 'develop')
+                        .replace('${BUILD_DURATION}', currentBuild.durationString)
+                        .replace('${BUILD_URL}', env.BUILD_URL)
 
             mail(
                 to: 'milukdk@gmail.com',
-                subject: subject,
+                subject: "[SUCCESS] ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                 mimeType: 'text/html',
                 body: body
             )
@@ -324,27 +315,18 @@ pipeline {
     }
 
     failure {
-        echo 'Pipeline execution failed! Check the logs above.'
-
-        // ===== ADD EMAIL NOTIFICATION =====
         script {
-            def subject = "[FAILURE] ${env.JOB_NAME} #${env.BUILD_NUMBER}"
-            def body = """<html>
-            <body>
-            <h2 style="color:red;"> Build Failed!</h2>
-            <p><b>Project:</b> ${env.JOB_NAME}<br>
-               <b>Build #:</b> ${env.BUILD_NUMBER}<br>
-               <b>Status:</b> FAILURE<br>
-               <b>Branch:</b> ${env.GIT_BRANCH ?: 'develop'}<br>
-               <b>Duration:</b> ${currentBuild.durationString}<br>
-               <b>Build URL:</b> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
-            <hr>
-            <p style="font-size:12px;color:#555;">Please review the logs and fix the issue.</p>
-            </body></html>"""
+            def bodyTemplate = readFile('jenkins/templates/failure_email.html')
+            def body = bodyTemplate
+                        .replace('${JOB_NAME}', env.JOB_NAME)
+                        .replace('${BUILD_NUMBER}', env.BUILD_NUMBER)
+                        .replace('${GIT_BRANCH}', env.GIT_BRANCH ?: 'develop')
+                        .replace('${BUILD_DURATION}', currentBuild.durationString)
+                        .replace('${BUILD_URL}', env.BUILD_URL)
 
             mail(
                 to: 'milukdk@gmail.com',
-                subject: subject,
+                subject: "[FAILURE] ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                 mimeType: 'text/html',
                 body: body
             )
@@ -352,3 +334,6 @@ pipeline {
     }
 }
 }
+
+
+
