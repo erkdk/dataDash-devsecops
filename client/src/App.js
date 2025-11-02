@@ -25,7 +25,7 @@ const InstructionText = () => (
   return (
     <div className="App">
       <header className="p-1 mb-2">
-        <h1>dataDash</h1>
+        <h1>dataDash-testLocal</h1>
       </header>
 	<InstructionText />
       <main className="container">
