@@ -125,8 +125,6 @@ pipeline {
                 }
             }
         }
-//----------------------------------
-        // Stage 5: Deploy to K3s
 
         // Stage 5: Deploy to K3s
         stage('Deploy to K3s') {
@@ -245,10 +243,6 @@ pipeline {
             }
         }
 
-
-
-//----------------------------------
-
 	// Stage 6: Smoke Tests
         stage('Smoke Tests') {
             steps {
@@ -277,39 +271,84 @@ pipeline {
             }
         }
     }
-    
+
     post {
-        always {
-            echo 'Pipeline execution completed'
-            
-            // Clean up local Docker images to save space
-            script {
-                sh """
-                # Remove the specific images we built
-                docker rmi ${BACKEND_IMAGE}:${BUILD_NUMBER} 2>/dev/null || true
-                docker rmi ${BACKEND_IMAGE}:latest 2>/dev/null || true
-                docker rmi ${FRONTEND_IMAGE}:${BUILD_NUMBER} 2>/dev/null || true
-                docker rmi ${FRONTEND_IMAGE}:latest 2>/dev/null || true
-                
-                # Logout from Harbor
-                docker logout ${HARBOR_REGISTRY} 2>/dev/null || true
-                
-                # Clean up dangling images
-                docker image prune -f 2>/dev/null || true
-                """
-                
-                sh 'echo "Cleaned up local Docker images"'
-            }
-        }
+    always {
+        echo 'Pipeline execution completed'
         
-        success {
-            echo 'Pipeline executed successfully! Application deployed to K3s.'
-            // You can add notifications here (Slack, Email, etc.)
-        }
-        
-        failure {
-            echo 'Pipeline execution failed! Check the logs above.'
-            // You can add failure notifications here
+        // Keep all your existing cleanup logic
+        script {
+            sh """
+            # Remove the specific images we built
+            docker rmi ${BACKEND_IMAGE}:${BUILD_NUMBER} 2>/dev/null || true
+            docker rmi ${BACKEND_IMAGE}:latest 2>/dev/null || true
+            docker rmi ${FRONTEND_IMAGE}:${BUILD_NUMBER} 2>/dev/null || true
+            docker rmi ${FRONTEND_IMAGE}:latest 2>/dev/null || true
+
+            # Logout from Harbor
+            docker logout ${HARBOR_REGISTRY} 2>/dev/null || true
+
+            # Clean up dangling images
+            docker image prune -f 2>/dev/null || true
+            """
+            echo "Cleaned up local Docker images"
         }
     }
+
+    success {
+        echo 'Pipeline executed successfully! Application deployed to K3s.'
+
+        // ===== ADD EMAIL NOTIFICATION =====
+        script {
+            def subject = "[SUCCESS] ${env.JOB_NAME} #${env.BUILD_NUMBER}"
+            def body = """<html>
+            <body>
+            <h2 style="color:green;"> Build Successful!</h2>
+            <p><b>Project:</b> ${env.JOB_NAME}<br>
+               <b>Build #:</b> ${env.BUILD_NUMBER}<br>
+               <b>Status:</b> SUCCESS<br>
+               <b>Branch:</b> ${env.GIT_BRANCH ?: 'develop'}<br>
+               <b>Duration:</b> ${currentBuild.durationString}<br>
+               <b>Build URL:</b> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
+            <hr>
+            <p style="font-size:12px;color:#555;">Automated notification from Jenkins (vm2 - jenkins.local)</p>
+            </body></html>"""
+
+            mail(
+                to: 'milukdk@gmail.com',
+                subject: subject,
+                mimeType: 'text/html',
+                body: body
+            )
+        }
+    }
+
+    failure {
+        echo 'Pipeline execution failed! Check the logs above.'
+
+        // ===== ADD EMAIL NOTIFICATION =====
+        script {
+            def subject = "[FAILURE] ${env.JOB_NAME} #${env.BUILD_NUMBER}"
+            def body = """<html>
+            <body>
+            <h2 style="color:red;"> Build Failed!</h2>
+            <p><b>Project:</b> ${env.JOB_NAME}<br>
+               <b>Build #:</b> ${env.BUILD_NUMBER}<br>
+               <b>Status:</b> FAILURE<br>
+               <b>Branch:</b> ${env.GIT_BRANCH ?: 'develop'}<br>
+               <b>Duration:</b> ${currentBuild.durationString}<br>
+               <b>Build URL:</b> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
+            <hr>
+            <p style="font-size:12px;color:#555;">Please review the logs and fix the issue.</p>
+            </body></html>"""
+
+            mail(
+                to: 'milukdk@gmail.com',
+                subject: subject,
+                mimeType: 'text/html',
+                body: body
+            )
+        }
+    }
+}
 }
