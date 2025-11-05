@@ -53,10 +53,10 @@ pipeline {
         }
 
 
-        // Stage 2: Build Docker Images
+        // Stage 3: Build Docker Images
         stage('Build Docker Images') {
             steps {
-                echo 'Stage 2: Building Docker images...'
+                echo 'Stage 3: Building Docker images...'
                 
                 script {
                     // Clean up any existing images first
@@ -85,11 +85,11 @@ pipeline {
             }
         }
 
-        // Stage 3: Security Scan with Trivy
+        // Stage 4: Security Scan with Trivy
         stage('Security Scan with Trivy') {
             steps {
-                echo 'Stage 3: Scanning container images for vulnerabilities...'
-                
+                echo 'Stage 4: Scanning container images for vulnerabilities...'
+
                 script {
                     // Scan Backend Image
                     sh """
@@ -112,11 +112,11 @@ pipeline {
             }
         }
 
-        // Stage 4: Push to Harbor Registry
+        // Stage 5: Push to Harbor Registry
         stage('Push to Harbor Registry') {
             steps {
-                echo 'Stage 4: Pushing images to Harbor registry...'
-                
+                echo 'Stage 5: Pushing images to Harbor registry...'
+
                 script {
                     // Login to Harbor
                     withCredentials([usernamePassword(
@@ -146,11 +146,11 @@ pipeline {
             }
         }
 
-        // Stage 5: Deploy to K3s
+        // Stage 6: Deploy to K3s
         stage('Deploy to K3s') {
             steps {
-                echo 'Stage 5: Deploying to K3s cluster...'
-                
+                echo 'Stage 6: Deploying to K3s cluster...'
+
                 // Load kubeconfig from Jenkins credentials
                 withCredentials([file(credentialsId: 'k3s-kubeconfig', variable: 'KUBECONFIG')]) {
                     script {
@@ -263,10 +263,10 @@ pipeline {
             }
         }
 
-	// Stage 6: Smoke Tests
+	// Stage 7: Smoke Tests
         stage('Smoke Tests') {
             steps {
-                echo 'Stage 6: Running smoke tests...'
+                echo 'Stage 7: Running smoke tests...'
                 
                 withCredentials([file(credentialsId: 'k3s-kubeconfig', variable: 'KUBECONFIG')]) {
                     script {
@@ -323,8 +323,9 @@ pipeline {
                         .replace('${BUILD_NUMBER}', env.BUILD_NUMBER)
                         .replace('${GIT_BRANCH}', env.GIT_BRANCH ?: 'develop')
                         .replace('${BUILD_DURATION}', currentBuild.durationString)
+                        .replace('${SONAR_PROJECT_KEY}', env.SONAR_PROJECT_KEY ?: 'dataDash-devsecops')
                         .replace('${BUILD_URL}', env.BUILD_URL)
-
+                        
             mail(
                 to: 'milukdk@gmail.com',
                 subject: "[SUCCESS] ${env.JOB_NAME} #${env.BUILD_NUMBER}",
@@ -342,6 +343,7 @@ pipeline {
                         .replace('${BUILD_NUMBER}', env.BUILD_NUMBER)
                         .replace('${GIT_BRANCH}', env.GIT_BRANCH ?: 'develop')
                         .replace('${BUILD_DURATION}', currentBuild.durationString)
+                        .replace('${SONAR_PROJECT_KEY}', env.SONAR_PROJECT_KEY ?: 'dataDash-devsecops')
                         .replace('${BUILD_URL}', env.BUILD_URL)
 
             mail(
@@ -354,6 +356,3 @@ pipeline {
     }
 }
 }
-
-
-
