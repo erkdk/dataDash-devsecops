@@ -33,6 +33,23 @@ pipeline {
             }
         }
 
+        // Stage 2: SonarQube Static Code Analysis
+        stage('SonarQube Analysis') {
+            environment {
+                SONAR_TOKEN = credentials('sonarqube-token')
+            }
+            echo "Stage 2: Running SonarQube static code analysis..."
+            withSonarQubeEnv('sonarqube'){
+                sh '''
+                sonar-scanner \
+                    -Dsonar.projectKey=datadash-devsecops \
+                    -Dsonar.sources=. \
+                    -Dsonar.host.url=http://k8smon.local:31000 \
+                    -Dsonar.login=$SONAR_TOKEN
+                '''
+            }
+        }
+
         // Stage 2: Build Docker Images
         stage('Build Docker Images') {
             steps {
