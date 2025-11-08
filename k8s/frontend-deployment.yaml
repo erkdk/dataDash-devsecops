@@ -16,6 +16,7 @@ spec:
       containers:
       - name: datadash-frontend
         image: registry.local/datadash/frontend:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 3000
         env:
