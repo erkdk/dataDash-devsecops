@@ -239,8 +239,15 @@ pipeline {
                         """
                         
                         // Wait for frontend rollout
+				
+			                        
                         sh """
-                        kubectl rollout restart deployment/datadash-frontend -n ${K8S_NAMESPACE} --timeout=180s
+			echo "=== Restarting Frontend Deployment ==="
+			kubectl rollout restart deployment/datadash-frontend -n ${K8S_NAMESPACE}
+                        """	
+				
+                        sh """
+                        kubectl rollout status deployment/datadash-frontend -n ${K8S_NAMESPACE} --timeout=180s
                         """
                         
                         sh 'echo "Application successfully deployed to K3s"'
