@@ -180,10 +180,8 @@ pipeline {
                         // Apply all Kubernetes manifests
                         sh """
                         kubectl apply -f k8s/namespace.yaml
-
                         kubectl apply -f k8s/backend-service.yaml
                         kubectl apply -f k8s/frontend-service.yaml
-        
                         kubectl apply -f k8s/ingress.yaml
                         """
 
@@ -242,7 +240,7 @@ pipeline {
                         
                         // Wait for frontend rollout
                         sh """
-                        kubectl rollout status deployment/datadash-frontend -n ${K8S_NAMESPACE} --timeout=180s
+                        kubectl rollout restart deployment/datadash-frontend -n ${K8S_NAMESPACE} --timeout=180s
                         """
                         
                         sh 'echo "Application successfully deployed to K3s"'
