@@ -16,6 +16,7 @@ spec:
       containers:
       - name: datadash-backend
         image: registry.local/datadash/backend:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 5000
         env:
@@ -28,8 +29,8 @@ spec:
               key: mongodb-uri
         - name: PORT
           value: "5000"
-        - name: HOST        # CRITICAL: Add this
-          value: "0.0.0.0"  # CRITICAL: Add this
+        - name: HOST        
+          value: "0.0.0.0"  
         resources:
           requests:
             memory: "256Mi"
@@ -41,7 +42,7 @@ spec:
           httpGet:
             path: /health
             port: 5000
-          initialDelaySeconds: 45  # Increased from 30
+          initialDelaySeconds: 45  
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
@@ -49,7 +50,7 @@ spec:
           httpGet:
             path: /health
             port: 5000
-          initialDelaySeconds: 10  # Increased from 5
+          initialDelaySeconds: 10  
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 3
