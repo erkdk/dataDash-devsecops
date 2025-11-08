@@ -238,9 +238,7 @@ pipeline {
                         }
                         """
                         
-                        // Wait for frontend rollout
-				
-			                        
+                        // Wait for frontend rollout                   
                         sh """
 			echo "=== Restarting Frontend Deployment ==="
 			kubectl rollout restart deployment/datadash-frontend -n ${K8S_NAMESPACE}
