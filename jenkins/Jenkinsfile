@@ -326,7 +326,6 @@ pipeline {
                         .replace('${BUILD_NUMBER}', env.BUILD_NUMBER)
                         .replace('${GIT_BRANCH}', env.GIT_BRANCH ?: 'develop')
                         .replace('${BUILD_DURATION}', currentBuild.durationString)
-                        .replace('${SONAR_PROJECT_KEY}', env.SONAR_PROJECT_KEY ?: 'dataDash-devsecops')
                         .replace('${BUILD_URL}', env.BUILD_URL)
                         
             mail(
@@ -346,7 +345,6 @@ pipeline {
                         .replace('${BUILD_NUMBER}', env.BUILD_NUMBER)
                         .replace('${GIT_BRANCH}', env.GIT_BRANCH ?: 'develop')
                         .replace('${BUILD_DURATION}', currentBuild.durationString)
-                        .replace('${SONAR_PROJECT_KEY}', env.SONAR_PROJECT_KEY ?: 'dataDash-devsecops')
                         .replace('${BUILD_URL}', env.BUILD_URL)
 
             mail(
